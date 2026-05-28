@@ -42,6 +42,17 @@ const getDayOfWeekJP = (date: Date) => {
   return days[date.getDay()];
 };
 
+const formatJSTTimeLabel = (isoString: string) => {
+  try {
+    const d = new Date(isoString);
+    const h = String(d.getHours()).padStart(2, "0");
+    const m = String(d.getMinutes()).padStart(2, "0");
+    return `${h}:${m}`;
+  } catch (e) {
+    return "";
+  }
+};
+
 // Helper to sanitize and normalize Google Calendar descriptions for inline display
 const cleanDescriptionForTile = (desc: string) => {
   if (!desc) return "";
@@ -1116,14 +1127,19 @@ export default function App() {
                                 key={`event-pill-${ev.id}`}
                                 style={pos}
                                 onClick={() => setSelectedEvent(ev)}
-                                className={`absolute h-[80%] rounded-md flex items-center justify-between px-3 text-left overflow-hidden select-none cursor-pointer transition-all active:scale-98 border shadow-xs ${styleConfig.bg} ${styleConfig.border}`}
+                                className={`absolute h-[88%] rounded-md flex flex-col justify-center items-start px-2.5 py-1 text-left overflow-hidden select-none cursor-pointer transition-all active:scale-98 border shadow-xs ${styleConfig.bg} ${styleConfig.border}`}
                                 title={ev.description && ev.description.trim() ? `${ev.summary}: ${ev.description}` : `${ev.summary}`}
                               >
-                                <span className="font-sans text-[11px] font-black tracking-tight truncate mr-1">
+                                <div className="flex items-center justify-between w-full gap-1 mb-0.5 select-none">
+                                  <span className="text-[9px] font-bold opacity-85 font-mono tracking-tight shrink-0">
+                                    {formatJSTTimeLabel(ev.start)}～{formatJSTTimeLabel(ev.end)}
+                                  </span>
+                                  <span className="text-[7.5px] font-black scale-90 px-1 rounded-xs bg-black/10 shrink-0 block">
+                                    {styleConfig.tag}
+                                  </span>
+                                </div>
+                                <span className="font-sans text-[11px] font-black tracking-tight truncate w-full leading-tight select-none">
                                   {eventLabel}
-                                </span>
-                                <span className="text-[8px] font-bold scale-90 px-1 rounded-sm bg-black/5 shrink-0 block">
-                                  {styleConfig.tag}
                                 </span>
                               </button>
                             );
