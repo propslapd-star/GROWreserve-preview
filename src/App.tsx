@@ -485,22 +485,43 @@ export default function App() {
           throw new Error(data.error || "カレンダーイベントの取得に失敗しました。");
         }
       } catch (backendError: any) {
-        console.warn("Backend API not reachable or returned HTML. Trying direct Google Calendar fetch via CORS-Proxy fallback...", backendError);
+        console.warn("Backend API not reachable or returned HTML. Trying direct Google Calendar fetch via multiple CORS-Proxy fallbacks...", backendError);
         usedFallback = true;
         
         try {
           const calendarId = "a79cd2a8ae67693a2b41f2d2ebd6cbd225f24c2573a95c420812d483ad07edc7@group.calendar.google.com";
           const googleIcsUrl = `https://calendar.google.com/calendar/ical/${encodeURIComponent(calendarId)}/public/basic.ics?nocache=${Date.now()}`;
-          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(googleIcsUrl)}`;
           
-          const proxyResponse = await fetch(proxyUrl);
-          if (!proxyResponse.ok) {
-            throw new Error(`CORS proxy returned status ${proxyResponse.status}`);
+          // List of reliable public CORS proxies to try sequentially
+          const proxies = [
+            `https://corsproxy.io/?${encodeURIComponent(googleIcsUrl)}`,
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(googleIcsUrl)}`,
+            `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(googleIcsUrl)}`
+          ];
+
+          let icsText = "";
+          let proxySuccess = false;
+
+          for (const proxyUrl of proxies) {
+            try {
+              console.log(`Trying public CORS proxy: ${proxyUrl}`);
+              const proxyResponse = await fetch(proxyUrl);
+              if (proxyResponse.ok) {
+                const text = await proxyResponse.text();
+                if (text && text.includes("BEGIN:VCALENDAR")) {
+                  icsText = text;
+                  proxySuccess = true;
+                  console.log(`Successfully fetched calendar feed using proxy: ${proxyUrl.split("?")[0]}`);
+                  break;
+                }
+              }
+            } catch (e) {
+              console.warn(`CORS proxy failed to respond: ${proxyUrl.split("?")[0]}`, e);
+            }
           }
-          
-          const icsText = await proxyResponse.text();
-          if (!icsText || !icsText.includes("BEGIN:VCALENDAR")) {
-            throw new Error("Fetched content does not look like an ICS file.");
+
+          if (!proxySuccess || !icsText) {
+            throw new Error("All public CORS proxies returned empty data or failed connecting.");
           }
           
           const parsed = parseICSClientSide(icsText);
