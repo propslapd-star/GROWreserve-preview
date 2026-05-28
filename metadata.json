@@ -1,0 +1,6 @@
+{
+  "name": "予約空き状況スケジュール",
+  "description": "Googleカレンダーから予定を取得し、店舗や施設の予約枠・予約空き状況をガントチャート風にマウントし美しく見やすく表示するホームページです。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
