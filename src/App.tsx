@@ -820,9 +820,6 @@ export default function App() {
             <h1 className="text-xl font-bold text-gray-900 tracking-tight" id="main_title_txt">
               カレンダー空き・予約状況スケジュール一覧
             </h1>
-            <p className="text-xs text-gray-500 font-medium" id="sub_title_txt">
-              Googleカレンダーから店舗予定・スケジュールを常にリアルタイムロード中
-            </p>
           </div>
         </div>
         
@@ -995,7 +992,7 @@ export default function App() {
               </span>
             </div>
             <div className="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full border border-indigo-150 font-bold" id="ready_indicator">
-              {isDemoModeActive ? "● デモプレビュー表示中 (0件ロード)" : `● 参照先Googleカレンダー同期済 (${events.length}件ロード完了)`}
+              {isDemoModeActive ? "● デモプレビュー表示中 (0件ロード)" : `● 参照先カレンダー同期済 (${events.length}件ロード完了)`}
             </div>
           </div>
 
