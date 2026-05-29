@@ -63,7 +63,7 @@ const cleanDescriptionForTile = (desc: string) => {
 };
 
 // Color assignment based on event titles (Matching the user's specific region colors)
-const getEventColorStyle = (title: string) => {
+const getEventColorStyle = (title: string, startISO?: string) => {
   const t = title.toLowerCase();
   
   if (t.includes("完了済み") || t.includes("完了")) {
@@ -95,11 +95,35 @@ const getEventColorStyle = (title: string) => {
     };
   }
   if (t.includes("不可") || t.includes("予約不可") || t.includes("eo")) {
-    return {
-      bg: "bg-[#ff0000] text-white border-red-700 hover:bg-[#ff1a1a]",
-      border: "border border-red-800 font-bold",
-      tag: "予約不可",
-    };
+    const diffDays = startISO ? (() => {
+      try {
+        const dDate = new Date(startISO);
+        dDate.setHours(0, 0, 0, 0);
+        let todayRef = new Date();
+        if (todayRef.getFullYear() !== 2026) {
+          todayRef = new Date("2026-05-29T00:00:00");
+        }
+        todayRef.setHours(0, 0, 0, 0);
+        const diffTime = dDate.getTime() - todayRef.getTime();
+        return Math.round(diffTime / (1000 * 60 * 60 * 24));
+      } catch (e) {
+        return 0;
+      }
+    })() : 0;
+
+    if (diffDays <= 4) {
+      return {
+        bg: "bg-slate-200 text-slate-600 border-slate-300 hover:bg-slate-300 cursor-not-allowed",
+        border: "border border-slate-400 font-medium",
+        tag: "予約不可",
+      };
+    } else {
+      return {
+        bg: "bg-[#ff0000] text-white border-red-700 hover:bg-[#ff1a1a]",
+        border: "border border-red-800 font-bold",
+        tag: "予約不可",
+      };
+    }
   }
   if (t.includes("前枠") || t.includes("お客様対応") || t.includes("対応") || t.includes("枠")) {
     return {
@@ -453,9 +477,16 @@ export default function App() {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Date Control (Today defaults to 2026-05-28!)
-  const [anchorDate, setAnchorDate] = useState<Date>(new Date("2026-05-28T00:00:00"));
-  const [selectedCalendarMonth, setSelectedCalendarMonth] = useState<Date>(new Date("2026-05-01T00:00:00"));
+  // Date Control (Today!)
+  const [anchorDate, setAnchorDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const [selectedCalendarMonth, setSelectedCalendarMonth] = useState<Date>(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
   
   // Modal detail display
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -567,7 +598,12 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchEvents(false);
+    fetchEvents(false).then(() => {
+      setTimeout(() => {
+        const today = new Date();
+        scrollToDate(formatJSTDateString(today));
+      }, 500);
+    });
   }, []);
 
   // Generate 62 days starting around the mock database anchor timeframe
@@ -608,6 +644,88 @@ export default function App() {
     return acc;
   }, {} as Record<string, CalendarEvent[]>);
 
+  // Helper to fill open gaps on a specific day with "予約不可" events
+  const fillEmptySlotsWithUnavailable = (dayDate: Date, existingEvents: CalendarEvent[]): CalendarEvent[] => {
+    const year = dayDate.getFullYear();
+    const month = dayDate.getMonth();
+    const date = dayDate.getDate();
+
+    // Define work hours limits as Dates (10:00 to 19:00)
+    const workStart = new Date(year, month, date, 10, 0, 0);
+    const workEnd = new Date(year, month, date, 19, 0, 0);
+
+    const intervals: { start: Date; end: Date }[] = [];
+    
+    for (const ev of existingEvents) {
+      if (ev.isAllDay) {
+        return [];
+      }
+      const s = new Date(ev.start);
+      const e = new Date(ev.end);
+      
+      const clampStart = s < workStart ? workStart : (s > workEnd ? workEnd : s);
+      const clampEnd = e < workStart ? workStart : (e > workEnd ? workEnd : e);
+
+      if (clampStart < clampEnd) {
+        intervals.push({ start: clampStart, end: clampEnd });
+      }
+    }
+
+    intervals.sort((a, b) => a.start.getTime() - b.start.getTime());
+
+    const merged: { start: Date; end: Date }[] = [];
+    for (const item of intervals) {
+      if (merged.length === 0) {
+        merged.push({ ...item });
+      } else {
+        const last = merged[merged.length - 1];
+        if (item.start <= last.end) {
+          last.end = new Date(Math.max(last.end.getTime(), item.end.getTime()));
+        } else {
+          merged.push({ ...item });
+        }
+      }
+    }
+
+    const unavailableEvents: CalendarEvent[] = [];
+    let currentPtr = workStart;
+
+    for (const interval of merged) {
+      if (interval.start > currentPtr) {
+        if (interval.start.getTime() - currentPtr.getTime() > 0) {
+          unavailableEvents.push({
+            id: `unavail_gap_${dayDate.getTime()}_${currentPtr.getTime()}`,
+            summary: "予約不可",
+            description: "システム調整および直前の調整時間のため予約不可となっております。",
+            location: "非公開",
+            start: currentPtr.toISOString(),
+            end: interval.start.toISOString(),
+            isAllDay: false
+          });
+        }
+      }
+      if (interval.end > currentPtr) {
+        currentPtr = interval.end;
+      }
+    }
+
+    if (currentPtr < workEnd) {
+      if (workEnd.getTime() - currentPtr.getTime() > 0) {
+        unavailableEvents.push({
+          id: `unavail_gap_${dayDate.getTime()}_${currentPtr.getTime()}`,
+          summary: "予約不可",
+          description: "システム調整および直前の調整時間のため予約不可となっております。",
+          location: "非公開",
+          start: currentPtr.toISOString(),
+          end: workEnd.toISOString(),
+          isAllDay: false
+        });
+      }
+    }
+
+    return unavailableEvents;
+  };
+
   // Calculate left and width style matching 9:00 to 20:00 block
   const getPositionStyle = (startISO: string, endISO: string) => {
     const start = new Date(startISO);
@@ -616,8 +734,8 @@ export default function App() {
     const startMin = start.getHours() * 60 + start.getMinutes();
     const endMin = end.getHours() * 60 + end.getMinutes();
 
-    const gridStart = 9 * 60; // 9:00
-    const gridEnd = 20 * 60;  // 20:00
+    const gridStart = 10 * 60; // 10:00
+    const gridEnd = 19 * 60;  // 19:00
     const totalMin = gridEnd - gridStart;
 
     const leftMin = Math.max(gridStart, Math.min(gridEnd, startMin));
@@ -653,10 +771,11 @@ export default function App() {
 
   // Go to default Today
   const handleGoToToday = () => {
-    const today = new Date("2026-05-28T00:00:00");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     setAnchorDate(today);
-    setSelectedCalendarMonth(new Date("2026-05-01T00:00:00"));
-    scrollToDate("2026-05-28");
+    setSelectedCalendarMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    scrollToDate(formatJSTDateString(today));
   };
 
   // Jump page intervals (+- 7 days)
@@ -684,7 +803,8 @@ export default function App() {
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateObj = new Date(year, month, day);
-      const isToday = day === 28 && month === 4 && year === 2026; // May 28, 2026 mock
+      const realToday = new Date();
+      const isToday = day === realToday.getDate() && month === realToday.getMonth() && year === realToday.getFullYear();
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const isSelected = formatJSTDateString(anchorDate) === dateStr;
 
@@ -818,21 +938,13 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900 tracking-tight" id="main_title_txt">
-              カレンダー空き・予約状況スケジュール一覧
+              予約スケジュール
             </h1>
           </div>
         </div>
         
         {/* Sync Controls */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="flex items-center gap-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-md transition-all font-semibold border border-slate-200 cursor-pointer"
-            id="config_btn"
-          >
-            表示テキスト変更
-          </button>
-
           <button 
             type="button"
             onClick={() => fetchEvents(true)}
@@ -916,7 +1028,7 @@ export default function App() {
               onClick={handleGoToToday}
               className="w-full text-center text-xs py-2 px-3 border border-amber-200 text-amber-800 bg-amber-50/80 hover:bg-amber-100 font-bold rounded-md transition-all cursor-pointer active:scale-98"
             >
-              本日 (5月28日)
+              本日 ({new Date().getMonth() + 1}月{new Date().getDate()}日)
             </button>
             <button
               onClick={() => handlePageScroll("next")}
@@ -964,10 +1076,13 @@ export default function App() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-[#ff0000] border border-red-700 rounded-sm shadow-2xs" />
+                <div className="flex gap-1 shrink-0">
+                  <div className="w-3 h-3 bg-slate-200 border border-slate-400 rounded-xs shadow-2xs" />
+                  <div className="w-3 h-3 bg-[#ff0000] border border-red-750 rounded-xs shadow-2xs" />
+                </div>
                 <div>
                   <span className="font-bold text-slate-800 block leading-tight">予約不可</span>
-                  <p className="text-[9px] text-slate-400">「不可」「予約不可」等を含む予定</p>
+                  <p className="text-[9px] text-slate-400">「不可」「予約不可」等（3日以内・当日以降は灰色、4日以降は赤色で表示）</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -988,7 +1103,7 @@ export default function App() {
           <div className="bg-slate-100 px-6 py-2 border-b border-slate-200 flex items-center justify-between shrink-0" id="header_label_year">
             <div className="flex items-center gap-2 font-semibold">
               <span className="text-xs text-slate-500 font-mono tracking-wide">
-                表示モード: ガントチャート・スケジュールタイムライン (9:00 - 20:00)
+                表示モード: ガントチャート・スケジュールタイムライン (10:00 - 19:00)
               </span>
             </div>
             <div className="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full border border-indigo-150 font-bold" id="ready_indicator">
@@ -1014,11 +1129,11 @@ export default function App() {
           {/* Hourly scale header labels */}
           <div className="bg-slate-50 grid grid-cols-[140px_1fr] border-b border-slate-200 shrink-0 text-xs text-slate-600 font-bold font-mono tracking-wider items-center h-10 select-none" id="hourly_scale_header">
             <div className="px-4 border-r border-slate-200 h-full flex items-center" id="lbl_col_date">日付</div>
-            <div className="grid grid-cols-11 h-full pl-0.5" id="lbl_col_hours">
-              {["9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"].map((hour, index) => (
+            <div className="grid grid-cols-9 h-full pl-0.5" id="lbl_col_hours">
+              {["10", "11", "12", "13", "14", "15", "16", "17", "18"].map((hour, index) => (
                 <div 
                   key={`scale-hour-${hour}`} 
-                  className={`px-1 h-full flex items-center border-r border-slate-200/60 justify-start pl-[4px] relative ${index === 10 ? "border-r-0" : ""}`}
+                  className={`px-1 h-full flex items-center border-r border-slate-200/60 justify-start pl-[4px] relative ${index === 8 ? "border-r-0" : ""}`}
                 >
                   <span className="inline-block text-[11px] font-bold text-slate-500 font-mono">
                     {hour}:00
@@ -1037,7 +1152,7 @@ export default function App() {
             {isLoading ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/80" id="spinner_layer">
                 <RefreshCw className="w-10 h-10 text-indigo-600 animate-spin" />
-                <p className="text-sm text-slate-600 font-bold font-sans">Googleカレンダー読み込み中...</p>
+                <p className="text-sm text-slate-600 font-bold font-sans">カレンダーデータ参照中...</p>
               </div>
             ) : error ? (
               <div className="p-12 text-center" id="error_layer">
@@ -1054,7 +1169,27 @@ export default function App() {
               </div>
             ) : (
               daysList.map((day) => {
-                const dayEvents = eventsByDay[day.dateStr] || [];
+                let dayEvents = eventsByDay[day.dateStr] || [];
+                
+                // Block active/empty times for days within 3 days from today (including today, and onward)
+                const dDate = new Date(day.date);
+                dDate.setHours(0, 0, 0, 0);
+
+                let todayRef = new Date();
+                if (todayRef.getFullYear() !== 2026) {
+                  todayRef = new Date("2026-05-29T00:00:00");
+                }
+                todayRef.setHours(0, 0, 0, 0);
+
+                const diffTime = dDate.getTime() - todayRef.getTime();
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays <= 3) {
+                  const gaps = fillEmptySlotsWithUnavailable(day.date, dayEvents);
+                  dayEvents = [...dayEvents, ...gaps];
+                  dayEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+                }
+
                 const isSelected = selectedDateStr === day.dateStr;
 
                 // Color weekend headers gracefully
@@ -1096,11 +1231,11 @@ export default function App() {
                     <div className="relative h-full w-full select-none" id={`timeline-content-${day.dateStr}`}>
                       
                       {/* Grid underlying markers */}
-                      <div className="absolute inset-0 grid grid-cols-11 pointer-events-none h-full pl-0.5">
-                        {Array.from({ length: 11 }).map((_, index) => (
+                      <div className="absolute inset-0 grid grid-cols-9 pointer-events-none h-full pl-0.5">
+                        {Array.from({ length: 9 }).map((_, index) => (
                           <div 
                             key={`bg-hour-bar-${day.dateStr}-${index}`} 
-                            className={`border-r border-slate-100 h-full ${index === 10 ? "border-r-0" : ""}`} 
+                            className={`border-r border-slate-100 h-full ${index === 8 ? "border-r-0" : ""}`} 
                           />
                         ))}
                       </div>
@@ -1109,15 +1244,24 @@ export default function App() {
                       <div className="absolute inset-0 h-full w-full flex items-center pr-2 pl-0.5" id={`events-overlay-${day.dateStr}`}>
                         
                         {dayEvents.length === 0 ? (
-                          <div className="text-[10px] text-slate-300 font-medium pl-4 py-2 font-mono whitespace-nowrap italic pointer-events-none select-none">
-                            （予定がありません。空き時間となっております。）
-                          </div>
+                          diffDays <= 0 ? (
+                            <div className="text-[10px] text-slate-400 font-medium pl-4 py-2 font-mono whitespace-nowrap italic pointer-events-none select-none">
+                              （予約不可）
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-slate-300 font-medium pl-4 py-2 font-mono whitespace-nowrap italic pointer-events-none select-none">
+                              （訪問予定なし・予約可能）
+                            </div>
+                          )
                         ) : (
                           dayEvents.map((ev) => {
                             const pos = getPositionStyle(ev.start, ev.end);
                             // Display the calendar title (summary) on the tile as requested
                             const eventLabel = ev.summary;
-                            const styleConfig = getEventColorStyle(ev.description && ev.description.trim() ? `${ev.summary} ${ev.description}` : ev.summary);
+                            const styleConfig = getEventColorStyle(
+                              ev.description && ev.description.trim() ? `${ev.summary} ${ev.description}` : ev.summary,
+                              ev.start
+                            );
 
                             return (
                               <button
