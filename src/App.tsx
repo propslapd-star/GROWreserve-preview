@@ -751,10 +751,10 @@ export default function App() {
   };
 
   // Click date row scrolling handler
-  const scrollToDate = (dateStr: string) => {
+  const scrollToDate = (dateStr: string, block: ScrollIntoViewOptions["block"] = "start") => {
     const element = dayRowRefs.current[dateStr];
     if (element && scheduleContainerRef.current) {
-      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      element.scrollIntoView({ behavior: "smooth", block });
     }
   };
 
@@ -947,7 +947,14 @@ export default function App() {
         <div className="flex items-center gap-2">
           <button 
             type="button"
-            onClick={() => fetchEvents(true)}
+            onClick={() => {
+              fetchEvents(true).then(() => {
+                setTimeout(() => {
+                  const today = new Date();
+                  scrollToDate(formatJSTDateString(today), "start");
+                }, 400);
+              });
+            }}
             disabled={isRefreshing}
             className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-md transition-all font-semibold shadow-xs cursor-pointer disabled:opacity-75"
             id="sync_btn"
