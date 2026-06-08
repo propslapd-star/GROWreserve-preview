@@ -597,14 +597,32 @@ export default function App() {
     }
   };
 
+  const hasInitialScrolled = useRef(false);
+
   useEffect(() => {
-    fetchEvents(false).then(() => {
-      setTimeout(() => {
-        const today = new Date();
-        scrollToDate(formatJSTDateString(today));
-      }, 500);
-    });
+    fetchEvents(false);
   }, []);
+
+  useEffect(() => {
+    if (!isLoading && !hasInitialScrolled.current) {
+      let attempts = 0;
+      const today = new Date();
+      const todayStr = formatJSTDateString(today);
+
+      const tryScroll = () => {
+        const element = dayRowRefs.current[todayStr];
+        if (element && scheduleContainerRef.current) {
+          scrollToDate(todayStr, "start");
+          hasInitialScrolled.current = true;
+        } else if (attempts < 15) {
+          attempts++;
+          setTimeout(tryScroll, 100);
+        }
+      };
+
+      setTimeout(tryScroll, 150);
+    }
+  }, [isLoading]);
 
   // Generate 62 days starting around the mock database anchor timeframe
   const generateDaysList = (): DaySchedule[] => {
@@ -985,7 +1003,6 @@ export default function App() {
 
           {/* Monthly Mini Calendar Widget */}
           <div>
-            <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase block mb-2">日付ジャンプ</span>
             <div className="border border-slate-200 rounded-lg p-3 bg-white" id="mini_calendar_container">
               <div className="flex items-center justify-between mb-2">
                 <button 
