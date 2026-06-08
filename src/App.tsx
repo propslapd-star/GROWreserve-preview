@@ -1134,13 +1134,13 @@ export default function App() {
           )}
 
           {/* Hourly scale header labels */}
-          <div className="bg-slate-50 grid grid-cols-[140px_1fr] border-b border-slate-200 shrink-0 text-xs text-slate-600 font-bold font-mono tracking-wider items-center h-10 select-none" id="hourly_scale_header">
-            <div className="px-4 border-r border-slate-200 h-full flex items-center" id="lbl_col_date">日付</div>
+          <div className="bg-slate-50 grid grid-cols-[140px_1fr] border-b border-slate-300 shrink-0 text-xs text-slate-600 font-bold font-mono tracking-wider items-center h-10 select-none" id="hourly_scale_header">
+            <div className="px-4 border-r border-slate-300 h-full flex items-center" id="lbl_col_date">日付</div>
             <div className="grid grid-cols-9 h-full pl-0.5" id="lbl_col_hours">
               {["10", "11", "12", "13", "14", "15", "16", "17", "18"].map((hour, index) => (
                 <div 
                   key={`scale-hour-${hour}`} 
-                  className={`px-1 h-full flex items-center border-r border-slate-200/60 justify-start pl-[4px] relative ${index === 8 ? "border-r-0" : ""}`}
+                  className={`px-1 h-full flex items-center border-r border-slate-300 justify-start pl-[4px] relative ${index === 8 ? "border-r-0" : ""}`}
                 >
                   <span className="inline-block text-[11px] font-bold text-slate-500 font-mono">
                     {hour}:00
@@ -1153,7 +1153,7 @@ export default function App() {
           {/* Timeline Grid values */}
           <div 
             ref={scheduleContainerRef}
-            className="flex-1 overflow-y-auto relative divide-y divide-slate-100 no-scrollbar select-none"
+            className="flex-1 overflow-y-auto relative divide-y divide-slate-300 no-scrollbar select-none"
             id="gantt_rows_scroller"
           >
             {isLoading ? (
@@ -1223,7 +1223,7 @@ export default function App() {
                   >
                     {/* Day label metadata representation column */}
                     <div 
-                      className={`px-3 py-2.5 flex flex-col justify-center items-start border-r border-slate-200 ${headerClass}`}
+                      className={`px-3 py-2.5 flex flex-col justify-center items-start border-r border-slate-300 ${headerClass}`}
                       id={`day-header-${day.dateStr}`}
                     >
                       <span className={`text-[13px] tracking-tight ${textClass}`}>
@@ -1242,7 +1242,7 @@ export default function App() {
                         {Array.from({ length: 9 }).map((_, index) => (
                           <div 
                             key={`bg-hour-bar-${day.dateStr}-${index}`} 
-                            className={`border-r border-slate-100 h-full ${index === 8 ? "border-r-0" : ""}`} 
+                            className={`border-r border-slate-200 h-full ${index === 8 ? "border-r-0" : ""}`} 
                           />
                         ))}
                       </div>
