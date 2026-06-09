@@ -22,5 +22,6 @@ export interface DaySchedule {
   dateStr: string; // "YYYY-MM-DD"
   label: string; // "5月28日"
   dayOfWeek: string; // "木"
+  holidayName?: string;
   slots: BookingSlot[];
 }

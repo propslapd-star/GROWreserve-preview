@@ -20,7 +20,8 @@ import {
   AlertCircle,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  Menu
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { CalendarEvent, DaySchedule } from "./types";
@@ -40,6 +41,91 @@ const formatJSTDayLabel = (date: Date) => {
 const getDayOfWeekJP = (date: Date) => {
   const days = ["日", "月", "火", "水", "木", "金", "土"];
   return days[date.getDay()];
+};
+
+const JAPANESE_HOLIDAYS: Record<string, string> = {
+  // 2025
+  "2025-01-01": "元日",
+  "2025-01-13": "成人の日",
+  "2025-02-11": "建国記念の日",
+  "2025-02-23": "天皇誕生日",
+  "2025-02-24": "振替休日",
+  "2025-03-20": "春分の日",
+  "2025-04-29": "昭和の日",
+  "2025-05-03": "憲法記念日",
+  "2025-05-04": "みどりの日",
+  "2025-05-05": "こどもの日",
+  "2025-05-06": "振替休日",
+  "2025-07-21": "海の日",
+  "2025-08-11": "山の日",
+  "2025-09-15": "敬老の日",
+  "2025-09-23": "秋分の日",
+  "2025-10-13": "スポーツの日",
+  "2025-11-03": "文化の日",
+  "2025-11-23": "勤労感謝の日",
+  "2025-11-24": "振替休日",
+
+  // 2026
+  "2026-01-01": "元日",
+  "2026-01-12": "成人の日",
+  "2026-02-11": "建国記念の日",
+  "2026-02-23": "天皇誕生日",
+  "2026-03-20": "春分の日",
+  "2026-04-29": "昭和の日",
+  "2026-05-03": "憲法記念日",
+  "2026-05-04": "みどりの日",
+  "2026-05-05": "こどもの日",
+  "2026-05-06": "振替休日",
+  "2026-07-20": "海の日",
+  "2026-08-11": "山の日",
+  "2026-09-21": "敬老の日",
+  "2026-09-22": "国民の休日",
+  "2026-09-23": "秋分の日",
+  "2026-10-12": "スポーツの日",
+  "2026-11-03": "文化の日",
+  "2026-11-23": "勤労感謝の日",
+
+  // 2027
+  "2027-01-01": "元日",
+  "2027-01-11": "成人の日",
+  "2027-02-11": "建国記念の日",
+  "2027-02-23": "天皇誕生日",
+  "2027-03-21": "春分の日",
+  "2027-03-22": "振替休日",
+  "2027-04-29": "昭和の日",
+  "2027-05-03": "憲法記念日",
+  "2027-05-04": "みどりの日",
+  "2027-05-05": "こどもの日",
+  "2027-07-19": "海の日",
+  "2027-08-11": "山の日",
+  "2027-09-20": "敬老の日",
+  "2027-09-23": "秋分の日",
+  "2027-10-11": "スポーツの日",
+  "2027-11-03": "文化の日",
+  "2027-11-23": "勤労感謝の日",
+};
+
+const getJapaneseHoliday = (date: Date): string | null => {
+  const dateStr = formatJSTDateString(date);
+  if (JAPANESE_HOLIDAYS[dateStr]) {
+    return JAPANESE_HOLIDAYS[dateStr];
+  }
+  
+  // Basic calculation fallback for fixed days
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  if (month === 1 && day === 1) return "元日";
+  if (month === 2 && day === 11) return "建国記念の日";
+  if (month === 2 && day === 23) return "天皇誕生日";
+  if (month === 4 && day === 29) return "昭和の日";
+  if (month === 5 && day === 3) return "憲法記念日";
+  if (month === 5 && day === 4) return "みどりの日";
+  if (month === 5 && day === 5) return "こどもの日";
+  if (month === 8 && day === 11) return "山の日";
+  if (month === 11 && day === 3) return "文化の日";
+  if (month === 11 && day === 23) return "勤労感謝の日";
+  
+  return null;
 };
 
 const formatJSTTimeLabel = (isoString: string) => {
@@ -494,6 +580,7 @@ export default function App() {
   // Layout Options Modal
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [customTableTitle, setCustomTableTitle] = useState<string>("予約空き状況 (予約状況 A)");
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
   // Scroll Refs
   const scheduleContainerRef = useRef<HTMLDivElement>(null);
@@ -634,12 +721,14 @@ export default function App() {
       const dateStr = formatJSTDateString(current);
       const label = formatJSTDayLabel(current);
       const dayOfWeek = getDayOfWeekJP(current);
+      const holidayName = getJapaneseHoliday(current) || undefined;
       
       list.push({
         date: current,
         dateStr,
         label,
         dayOfWeek,
+        holidayName,
         slots: []
       });
     }
@@ -827,9 +916,12 @@ export default function App() {
       const isSelected = formatJSTDateString(anchorDate) === dateStr;
 
       const dayOfWeek = dateObj.getDay();
+      const holidayName = getJapaneseHoliday(dateObj);
+      const isHoliday = !!holidayName;
+
       let fontColor = "text-gray-800";
-      if (dayOfWeek === 0) fontColor = "text-red-500 font-bold";
-      if (dayOfWeek === 6) fontColor = "text-blue-500 font-bold";
+      if (dayOfWeek === 0 || isHoliday) fontColor = "text-red-500 font-bold";
+      else if (dayOfWeek === 6) fontColor = "text-blue-500 font-bold";
 
       cells.push(
         <button
@@ -838,7 +930,9 @@ export default function App() {
             const clickedDate = new Date(year, month, day);
             setAnchorDate(clickedDate);
             scrollToDate(dateStr);
+            setIsSidebarOpen(false);
           }}
+          title={holidayName || undefined}
           className={`text-center py-1 rounded-sm text-xs relative flex flex-col items-center justify-center cursor-pointer font-sans transition-all hover:bg-slate-100 ${fontColor}
             ${isSelected ? "ring-2 ring-indigo-600 font-extrabold" : ""}
             ${isToday ? "bg-amber-100 text-amber-950 font-extrabold" : ""}
@@ -949,20 +1043,29 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 text-gray-800 flex flex-col font-sans select-none overflow-hidden h-screen" id="main_layout_frame">
       
       {/* Top Banner Navigation */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0 shadow-xs" id="navbar_header">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-            <CalendarDays className="w-6 h-6" />
+      <header className="bg-white border-b border-gray-200 px-3 py-2.5 sm:px-4 md:px-6 md:py-4 flex items-center justify-between shrink-0 shadow-xs gap-2 select-none" id="navbar_header">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="lg:hidden p-1.5 sm:p-2 hover:bg-slate-100 rounded-lg text-slate-600 cursor-pointer flex items-center justify-center transition-all border border-slate-200 shrink-0"
+            title="メニュー・カレンダーを表示 / 非表示"
+            id="sidebar_toggle_btn"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+            <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight" id="main_title_txt">
+          <div className="min-w-0">
+            <h1 className="text-sm sm:text-base md:text-xl font-bold text-gray-900 tracking-tight whitespace-nowrap truncate" id="main_title_txt">
               予約スケジュール
             </h1>
           </div>
         </div>
         
         {/* Sync Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <button 
             type="button"
             onClick={() => {
@@ -974,17 +1077,17 @@ export default function App() {
               });
             }}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-md transition-all font-semibold shadow-xs cursor-pointer disabled:opacity-75"
+            className="flex items-center gap-1 text-[10px] sm:text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1.5 sm:px-3 sm:py-2 md:px-3.5 md:py-2 rounded-md transition-all font-semibold shadow-xs cursor-pointer disabled:opacity-75 whitespace-nowrap"
             id="sync_btn"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-            リアルタイム同期
+            <RefreshCw className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+            <span className="hidden xs:inline">リアルタイム</span>同期
           </button>
 
           <button 
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-1.5 text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 px-3.5 py-2 rounded-md transition-all font-semibold border border-rose-200/65 cursor-pointer"
+            className="flex items-center justify-center text-[10px] sm:text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 px-2.5 py-1.5 sm:px-3 sm:py-2 md:px-3.5 md:py-2 rounded-md transition-all font-semibold border border-rose-200/65 cursor-pointer whitespace-nowrap"
             id="logout_lock_btn"
             title="ログアウトして画面をロックします"
           >
@@ -994,10 +1097,37 @@ export default function App() {
       </header>
 
       {/* Workspace Panel */}
-      <div className="flex flex-1 overflow-hidden" id="workspace_viewport">
+      <div className="flex flex-1 overflow-hidden relative" id="workspace_viewport">
         
+        {/* Mobile Backdrop Overlay */}
+        {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 z-35 bg-slate-950/40 backdrop-blur-xs lg:hidden transition-all duration-200" 
+            onClick={() => setIsSidebarOpen(false)} 
+            id="sidebar_overlay_backdrop"
+          />
+        )}
+
         {/* Left Control Column */}
-        <aside className="w-64 bg-white border-r border-gray-200 p-4 flex flex-col gap-4 overflow-y-auto shrink-0 select-none" id="control_sidebar">
+        <aside 
+          className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 p-4 flex flex-col gap-4 overflow-y-auto shrink-0 select-none transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          }`} 
+          id="control_sidebar"
+        >
+          
+          {/* Mobile Close Button Row */}
+          <div className="flex items-center justify-between lg:hidden border-b border-slate-100 pb-2 mb-1 shrink-0">
+            <span className="text-xs font-bold text-slate-500">メニュー・表示設定</span>
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              className="p-1 hover:bg-slate-100 rounded cursor-pointer"
+              id="sidebar_close_btn"
+            >
+              <X className="w-4.5 h-4.5 text-slate-500" />
+            </button>
+          </div>
           
 
 
@@ -1124,14 +1254,24 @@ export default function App() {
         <main className="flex-1 flex flex-col bg-white overflow-hidden" id="timeline_main_dashboard">
           
           {/* Subtitle Label Metadata info */}
-          <div className="bg-slate-100 px-6 py-2 border-b border-slate-200 flex items-center justify-between shrink-0" id="header_label_year">
-            <div className="flex items-center gap-2 font-semibold">
-              <span className="text-xs text-slate-500 font-mono tracking-wide">
-                表示モード: ガントチャート・スケジュールタイムライン (10:00 - 19:00)
+          <div className="bg-slate-100 px-3 py-1.5 sm:px-6 sm:py-2 border-b border-slate-200 flex items-center justify-between shrink-0 gap-2 select-none" id="header_label_year">
+            <div className="flex items-center gap-2 font-semibold min-w-0">
+              <span className="text-[10px] sm:text-xs text-slate-500 font-mono tracking-wide truncate">
+                <span className="hidden sm:inline">表示モード: </span>ガントチャート<span className="hidden md:inline">・スケジュールタイムライン</span> (10:00 - 19:00)
               </span>
             </div>
-            <div className="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full border border-indigo-150 font-bold" id="ready_indicator">
-              {isDemoModeActive ? "● デモプレビュー表示中 (0件ロード)" : `● 参照先カレンダー同期済 (${events.length}件ロード完了)`}
+            <div className="text-[10px] sm:text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full border border-indigo-150 font-bold shrink-0 truncate" id="ready_indicator">
+              {isDemoModeActive ? (
+                <>
+                  <span className="hidden sm:inline">● デモプレビュー表示中 (0件ロード)</span>
+                  <span className="sm:hidden">● デモ表示中</span>
+                </>
+              ) : (
+                <>
+                  <span className="hidden sm:inline">● 参照先カレンダー同期済 ({events.length}件ロード完了)</span>
+                  <span className="sm:hidden">● 同期済 ({events.length}件)</span>
+                </>
+              )}
             </div>
           </div>
 
@@ -1150,16 +1290,20 @@ export default function App() {
             </div>
           )}
 
-          {/* Hourly scale header labels */}
-          <div className="bg-slate-50 grid grid-cols-[140px_1fr] border-b border-slate-300 shrink-0 text-xs text-slate-600 font-bold font-mono tracking-wider items-center h-10 select-none" id="hourly_scale_header">
-            <div className="px-4 border-r border-slate-300 h-full flex items-center" id="lbl_col_date">日付</div>
+          {/* Gantt Chart Horizontal Scroll Container */}
+          <div className="w-full flex-1 flex flex-col overflow-x-auto overflow-y-hidden touch-pan-x" id="gantt_chart_x_scroller">
+            <div className="min-w-0 md:min-w-[760px] flex-1 flex flex-col h-full w-full" id="gantt_chart_inner_width_container">
+
+              {/* Hourly scale header labels */}
+              <div className="bg-slate-50 grid grid-cols-[70px_1fr] sm:grid-cols-[85px_1fr] md:grid-cols-[140px_1fr] border-b border-slate-300 shrink-0 text-xs text-slate-600 font-bold font-mono tracking-wider items-center h-10 select-none" id="hourly_scale_header">
+            <div className="px-1.5 sm:px-3 md:px-4 border-r border-slate-300 h-full flex items-center text-[10px] md:text-xs" id="lbl_col_date">日付</div>
             <div className="grid grid-cols-9 h-full pl-0.5" id="lbl_col_hours">
               {["10", "11", "12", "13", "14", "15", "16", "17", "18"].map((hour, index) => (
                 <div 
                   key={`scale-hour-${hour}`} 
-                  className={`px-1 h-full flex items-center border-r border-slate-300 justify-start pl-[4px] relative ${index === 8 ? "border-r-0" : ""}`}
+                  className={`px-0.5 sm:px-1 h-full flex items-center border-r border-slate-300 justify-center sm:justify-start sm:pl-[4px] relative ${index === 8 ? "border-r-0" : ""}`}
                 >
-                  <span className="inline-block text-[11px] font-bold text-slate-500 font-mono">
+                  <span className="inline-block text-[8.5px] sm:text-[11px] font-bold text-slate-500 font-mono whitespace-nowrap tracking-tighter leading-none">
                     {hour}:00
                   </span>
                 </div>
@@ -1215,13 +1359,22 @@ export default function App() {
                 }
 
                 const isSelected = selectedDateStr === day.dateStr;
+                const isRealToday = day.dateStr === formatJSTDateString(new Date());
 
                 // Color weekend headers gracefully
                 let headerClass = "bg-white";
                 let textClass = "text-slate-800 font-extrabold";
                 let badgeClass = "bg-slate-100 text-slate-600";
 
-                if (day.dayOfWeek === "土") {
+                if (isRealToday) {
+                  headerClass = "bg-slate-300";
+                  textClass = "text-slate-900 font-extrabold";
+                  badgeClass = "bg-slate-500 text-white";
+                } else if (day.holidayName) {
+                  headerClass = "bg-rose-50/30";
+                  textClass = "text-red-700 font-extrabold";
+                  badgeClass = "bg-rose-100/70 text-red-800";
+                } else if (day.dayOfWeek === "土") {
                   headerClass = "bg-indigo-50/30";
                   textClass = "text-blue-700 font-extrabold";
                   badgeClass = "bg-blue-100/70 text-blue-800";
@@ -1235,20 +1388,31 @@ export default function App() {
                   <div 
                     key={day.dateStr}
                     ref={(el) => { dayRowRefs.current[day.dateStr] = el; }}
-                    className={`grid grid-cols-[140px_1fr] relative min-h-[3.75rem] transition-colors ${isSelected ? "bg-indigo-50/30 ring-1 ring-inset ring-indigo-200" : ""}`}
+                    className={`grid grid-cols-[70px_1fr] sm:grid-cols-[85px_1fr] md:grid-cols-[140px_1fr] relative min-h-[2.5rem] lg:min-h-[3rem] transition-colors ${isSelected ? "bg-indigo-50/30 ring-1 ring-inset ring-indigo-200" : ""}`}
                     id={`day-row-${day.dateStr}`}
                   >
                     {/* Day label metadata representation column */}
                     <div 
-                      className={`px-3 py-2.5 flex flex-col justify-center items-start border-r border-slate-300 ${headerClass}`}
+                      className={`px-1 sm:px-2 py-1 flex flex-col justify-center border-r border-slate-300 h-full gap-0.5 md:flex-row md:items-center md:justify-between md:px-2.5 ${headerClass}`}
                       id={`day-header-${day.dateStr}`}
                     >
-                      <span className={`text-[13px] tracking-tight ${textClass}`}>
-                        {day.label}
-                      </span>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm tracking-wide mt-1 inline-block ${badgeClass}`}>
-                        {day.dayOfWeek}曜日
-                      </span>
+                      <div className="flex items-center gap-1 sm:gap-1.5 justify-center md:justify-start select-none">
+                        <span className={`text-[10px] sm:text-xs font-black tracking-tighter sm:tracking-tight shrink-0 ${textClass}`}>
+                          <span className="md:hidden">{day.label.replace("月", "/").replace("日", "")}</span>
+                          <span className="hidden md:inline">{day.label}</span>
+                        </span>
+                        <span className={`text-[8.5px] sm:text-[9.5px] font-bold px-0.5 py-0.2 md:px-1 md:py-0.5 rounded-xs tracking-tighter sm:tracking-wider shrink-0 ${badgeClass}`}>
+                          {day.dayOfWeek}
+                        </span>
+                      </div>
+                      {day.holidayName && (
+                        <div className="flex justify-center select-none shrink-0" title={day.holidayName}>
+                          <span className="text-[7.5px] md:text-[8px] font-extrabold px-0.5 py-[0.5px] md:px-1 md:py-0.5 rounded-xs tracking-tighter bg-rose-100 text-red-700 border border-rose-200 text-center truncate max-w-[28px] md:max-w-[52px]">
+                            <span className="md:hidden">祝</span>
+                            <span className="hidden md:inline">{day.holidayName}</span>
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Timeline Cell */}
@@ -1269,11 +1433,11 @@ export default function App() {
                         
                         {dayEvents.length === 0 ? (
                           diffDays <= 0 ? (
-                            <div className="text-[10px] text-slate-400 font-medium pl-4 py-2 font-mono whitespace-nowrap italic pointer-events-none select-none">
+                            <div className="text-[10px] text-slate-400 font-medium pl-4 h-full flex items-center font-mono whitespace-nowrap italic pointer-events-none select-none">
                               （予約不可）
                             </div>
                           ) : (
-                            <div className="text-[10px] text-slate-300 font-medium pl-4 py-2 font-mono whitespace-nowrap italic pointer-events-none select-none">
+                            <div className="text-[10px] text-slate-300 font-medium pl-4 h-full flex items-center font-mono whitespace-nowrap italic pointer-events-none select-none">
                               （訪問予定なし・予約可能）
                             </div>
                           )
@@ -1287,23 +1451,38 @@ export default function App() {
                               ev.start
                             );
 
+                            // Calculate duration in minutes to handle short visual labels gracefully
+                            const startObj = new Date(ev.start);
+                            const endObj = new Date(ev.end);
+                            const durationMin = (endObj.getTime() - startObj.getTime()) / 60000;
+                            const showFullTime = durationMin >= 60;
+                            const showShortTime = durationMin >= 30;
+
                             return (
                               <button
                                 key={`event-pill-${ev.id}`}
                                 style={pos}
                                 onClick={() => setSelectedEvent(ev)}
-                                className={`absolute h-[88%] rounded-md flex flex-col justify-center items-start px-2.5 py-1 text-left overflow-hidden select-none cursor-pointer transition-all active:scale-98 border shadow-xs ${styleConfig.bg} ${styleConfig.border}`}
+                                className={`absolute h-[85%] rounded-md flex flex-row items-center px-1.5 py-0 text-left overflow-hidden select-none cursor-pointer transition-all active:scale-98 border shadow-2xs ${styleConfig.bg} ${styleConfig.border}`}
                                 title={ev.description && ev.description.trim() ? `${ev.summary}: ${ev.description}` : `${ev.summary}`}
                               >
-                                <div className="flex items-center justify-between w-full gap-1 mb-0.5 select-none">
-                                  <span className="text-[9px] font-bold opacity-85 font-mono tracking-tight shrink-0">
-                                    {formatJSTTimeLabel(ev.start)}～{formatJSTTimeLabel(ev.end)}
-                                  </span>
-                                  <span className="text-[7.5px] font-black scale-90 px-1 rounded-xs bg-black/10 shrink-0 block">
-                                    {styleConfig.tag}
-                                  </span>
-                                </div>
-                                <span className="font-sans text-[11px] font-black tracking-tight truncate w-full leading-tight select-none">
+                                {(showFullTime || showShortTime) && (
+                                  <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 border-r border-black/10 pr-1 sm:pr-1.5 mr-1 sm:mr-1.5 h-3.5 select-none whitespace-nowrap">
+                                    <span className="text-[7.5px] sm:text-[8.5px] font-bold opacity-90 font-mono tracking-tighter whitespace-nowrap">
+                                      {showFullTime ? (
+                                        `${formatJSTTimeLabel(ev.start)}-${formatJSTTimeLabel(ev.end)}`
+                                      ) : (
+                                        `${formatJSTTimeLabel(ev.start)}`
+                                      )}
+                                    </span>
+                                    {styleConfig.tag && showFullTime && (
+                                      <span className="text-[7px] font-extrabold scale-90 px-0.5 sm:px-1 py-[0.5px] rounded-xs bg-black/10 shrink-0 select-none whitespace-nowrap hidden xs:inline">
+                                        {styleConfig.tag}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                <span className="font-sans text-[9px] sm:text-[10.5px] font-black tracking-tight truncate flex-1 leading-none select-none whitespace-nowrap">
                                   {eventLabel}
                                 </span>
                               </button>
@@ -1318,6 +1497,8 @@ export default function App() {
                 );
               })
             )}
+          </div>
+            </div>
           </div>
         </main>
       </div>
