@@ -1043,7 +1043,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 text-gray-800 flex flex-col font-sans select-none overflow-hidden h-screen" id="main_layout_frame">
       
       {/* Top Banner Navigation */}
-      <header className="bg-white border-b border-gray-200 px-3 py-2.5 sm:px-4 md:px-6 md:py-4 flex items-center justify-between shrink-0 shadow-xs gap-2 select-none" id="navbar_header">
+      <header className="bg-white border-b border-gray-200 px-3 py-2.5 sm:px-4 md:px-6 md:py-4 flex items-center justify-between shrink-0 shadow-xs gap-2 select-none sticky top-0 z-30" id="navbar_header">
         <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
           <button
             type="button"
@@ -1254,7 +1254,7 @@ export default function App() {
         <main className="flex-1 flex flex-col bg-white overflow-hidden" id="timeline_main_dashboard">
           
           {/* Subtitle Label Metadata info */}
-          <div className="bg-slate-100 px-3 py-1.5 sm:px-6 sm:py-2 border-b border-slate-200 flex items-center justify-between shrink-0 gap-2 select-none" id="header_label_year">
+          <div className="bg-slate-100 px-3 py-1.5 sm:px-6 sm:py-2 border-b border-slate-200 flex items-center justify-between shrink-0 gap-2 select-none sticky top-0 z-20" id="header_label_year">
             <div className="flex items-center gap-2 font-semibold min-w-0">
               <span className="text-[10px] sm:text-xs text-slate-500 font-mono tracking-wide truncate">
                 <span className="hidden sm:inline">表示モード: </span>ガントチャート<span className="hidden md:inline">・スケジュールタイムライン</span> (10:00 - 19:00)
@@ -1295,7 +1295,7 @@ export default function App() {
             <div className="min-w-0 md:min-w-[760px] flex-1 flex flex-col h-full w-full" id="gantt_chart_inner_width_container">
 
               {/* Hourly scale header labels */}
-              <div className="bg-slate-50 grid grid-cols-[70px_1fr] sm:grid-cols-[85px_1fr] md:grid-cols-[140px_1fr] border-b border-slate-300 shrink-0 text-xs text-slate-600 font-bold font-mono tracking-wider items-center h-10 select-none" id="hourly_scale_header">
+              <div className="bg-slate-50 grid grid-cols-[70px_1fr] sm:grid-cols-[85px_1fr] md:grid-cols-[140px_1fr] border-b border-slate-300 shrink-0 text-xs text-slate-600 font-bold font-mono tracking-wider items-center h-10 select-none sticky top-0 z-10" id="hourly_scale_header">
             <div className="px-1.5 sm:px-3 md:px-4 border-r border-slate-300 h-full flex items-center text-[10px] md:text-xs" id="lbl_col_date">日付</div>
             <div className="grid grid-cols-9 h-full pl-0.5" id="lbl_col_hours">
               {["10", "11", "12", "13", "14", "15", "16", "17", "18"].map((hour, index) => (
