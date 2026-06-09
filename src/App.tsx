@@ -858,10 +858,20 @@ export default function App() {
   };
 
   // Click date row scrolling handler
-  const scrollToDate = (dateStr: string, block: ScrollIntoViewOptions["block"] = "start") => {
+  const scrollToDate = (dateStr: string, _block: ScrollIntoViewOptions["block"] = "start") => {
     const element = dayRowRefs.current[dateStr];
-    if (element && scheduleContainerRef.current) {
-      element.scrollIntoView({ behavior: "smooth", block });
+    const container = scheduleContainerRef.current;
+    if (element && container) {
+      let topVal = 0;
+      let cur: HTMLElement | null = element;
+      while (cur && cur !== container) {
+        topVal += cur.offsetTop;
+        cur = cur.offsetParent as HTMLElement | null;
+      }
+      container.scrollTo({
+        top: topVal,
+        behavior: "smooth"
+      });
     }
   };
 
