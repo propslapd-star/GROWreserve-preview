@@ -586,6 +586,90 @@ export default function App() {
   const scheduleContainerRef = useRef<HTMLDivElement>(null);
   const dayRowRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
+  // Zoom status
+  const [zoomLevel, setZoomLevel] = useState<number>(() => {
+    const saved = localStorage.getItem("gantt_zoom_level");
+    if (saved) {
+      const num = parseFloat(saved);
+      if (!isNaN(num) && num >= 0.5 && num <= 2.0) return num;
+    }
+    return 1.0;
+  });
+
+  const zoomLevelRef = useRef<number>(zoomLevel);
+  useEffect(() => {
+    zoomLevelRef.current = zoomLevel;
+  }, [zoomLevel]);
+
+  const zoomContainerRef = useRef<HTMLDivElement>(null);
+
+  const updateZoomLevel = (newVal: number) => {
+    const clamped = Math.max(0.5, Math.min(2.0, Math.round(newVal * 100) / 100));
+    setZoomLevel(clamped);
+    localStorage.setItem("gantt_zoom_level", clamped.toString());
+  };
+
+  useEffect(() => {
+    const container = zoomContainerRef.current;
+    if (!container) return;
+
+    let initialDistance: number | null = null;
+    let initialZoom = 1.0;
+
+    const getDistance = (t1: Touch, t2: Touch) => {
+      const dx = t1.clientX - t2.clientX;
+      const dy = t1.clientY - t2.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        initialDistance = getDistance(e.touches[0], e.touches[1]);
+        initialZoom = zoomLevelRef.current;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && initialDistance !== null) {
+        e.preventDefault();
+        const currentDistance = getDistance(e.touches[0], e.touches[1]);
+        const scaleFactor = currentDistance / initialDistance;
+        const targetZoom = initialZoom * scaleFactor;
+        const clampedZoom = Math.max(0.6, Math.min(2.0, Math.round(targetZoom * 40) / 40));
+        setZoomLevel(clampedZoom);
+        localStorage.setItem("gantt_zoom_level", clampedZoom.toString());
+      }
+    };
+
+    const handleTouchEnd = () => {
+      initialDistance = null;
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        const direction = e.deltaY < 0 ? 1 : -1;
+        const speed = 0.05;
+        const targetZoom = zoomLevelRef.current + direction * speed;
+        const clamped = Math.max(0.6, Math.min(2.0, Math.round(targetZoom * 40) / 40));
+        setZoomLevel(clamped);
+        localStorage.setItem("gantt_zoom_level", clamped.toString());
+      }
+    };
+
+    container.addEventListener("touchstart", handleTouchStart, { passive: false });
+    container.addEventListener("touchmove", handleTouchMove, { passive: false });
+    container.addEventListener("touchend", handleTouchEnd);
+    container.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchmove", handleTouchMove);
+      container.removeEventListener("touchend", handleTouchEnd);
+      container.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
+
   // Fetch Google calendar events on mount & refresh
   const fetchEvents = async (force: boolean = false) => {
     setIsRefreshing(true);
@@ -1270,18 +1354,49 @@ export default function App() {
                 <span className="hidden sm:inline">表示モード: </span>ガントチャート<span className="hidden md:inline">・スケジュールタイムライン</span> (10:00 - 19:00)
               </span>
             </div>
-            <div className="text-[10px] sm:text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full border border-indigo-150 font-bold shrink-0 truncate" id="ready_indicator">
-              {isDemoModeActive ? (
-                <>
-                  <span className="hidden sm:inline">● デモプレビュー表示中 (0件ロード)</span>
-                  <span className="sm:hidden">● デモ表示中</span>
-                </>
-              ) : (
-                <>
-                  <span className="hidden sm:inline">● 参照先カレンダー同期済 ({events.length}件ロード完了)</span>
-                  <span className="sm:hidden">● 同期済 ({events.length}件)</span>
-                </>
-              )}
+
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+              {/* Zoom Control Panel */}
+              <div className="flex items-center bg-slate-200/50 p-0.5 rounded-md border border-slate-300/40 text-[9px] sm:text-xs select-none shadow-3xs" id="zoom_action_controller">
+                <button
+                  type="button"
+                  onClick={() => updateZoomLevel(zoomLevel - 0.1)}
+                  className="px-1.5 py-0.5 font-extrabold text-slate-700 hover:text-indigo-600 rounded-sm hover:bg-white active:scale-95 transition-all outline-hidden cursor-pointer"
+                  title="縮小"
+                >
+                  ー
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateZoomLevel(1.0)}
+                  className="px-1.5 py-0.5 font-bold font-mono text-slate-600 hover:text-indigo-600 rounded-sm hover:bg-white active:scale-95 transition-all text-[8px] sm:text-[10px] outline-hidden cursor-pointer"
+                  title="ズームをリセットして100%にする"
+                >
+                  {Math.round(zoomLevel * 100)}%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateZoomLevel(zoomLevel + 0.1)}
+                  className="px-1.5 py-0.5 font-extrabold text-slate-700 hover:text-indigo-600 rounded-sm hover:bg-white active:scale-95 transition-all outline-hidden cursor-pointer"
+                  title="拡大"
+                >
+                  ＋
+                </button>
+              </div>
+
+              <div className="text-[10px] sm:text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full border border-indigo-150 font-bold shrink-0 truncate animate-fade-in" id="ready_indicator">
+                {isDemoModeActive ? (
+                  <>
+                    <span className="hidden sm:inline">● デモプレビュー表示中 (0件ロード)</span>
+                    <span className="sm:hidden">● デモ表示中</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">● 参照先カレンダー同期済 ({events.length}件ロード完了)</span>
+                    <span className="sm:hidden">● 同期済 ({events.length}件)</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1301,8 +1416,8 @@ export default function App() {
           )}
 
           {/* Gantt Chart Horizontal Scroll Container */}
-          <div className="w-full flex-1 flex flex-col overflow-x-auto overflow-y-hidden touch-pan-x" id="gantt_chart_x_scroller">
-            <div className="min-w-0 md:min-w-[760px] flex-1 flex flex-col h-full w-full" id="gantt_chart_inner_width_container">
+          <div ref={zoomContainerRef} className="w-full flex-1 flex flex-col overflow-x-auto overflow-y-hidden touch-pan-x" id="gantt_chart_x_scroller">
+            <div style={{ zoom: zoomLevel }} className="min-w-0 md:min-w-[760px] flex-1 flex flex-col h-full w-full origin-top-left" id="gantt_chart_inner_width_container">
 
               {/* Hourly scale header labels */}
               <div className="bg-slate-50 grid grid-cols-[70px_1fr] sm:grid-cols-[85px_1fr] md:grid-cols-[140px_1fr] border-b border-slate-300 shrink-0 text-xs text-slate-600 font-bold font-mono tracking-wider items-center h-10 select-none sticky top-0 z-10" id="hourly_scale_header">
