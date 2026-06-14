@@ -795,26 +795,36 @@ export default function App() {
     }
   }, [isLoading]);
 
-  // Generate 62 days starting around the mock database anchor timeframe
+  // Generate days dynamic timeframe: from exactly 1 month before today to 1 month after today
   const generateDaysList = (): DaySchedule[] => {
-    const start = new Date("2026-05-15T00:00:00");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const start = new Date(today);
+    start.setMonth(start.getMonth() - 1);
+
+    const end = new Date(today);
+    end.setMonth(end.getMonth() + 1);
+
     const list: DaySchedule[] = [];
+    const current = new Date(start);
     
-    for (let i = 0; i < 62; i++) {
-      const current = new Date(start.getTime() + i * 24 * 60 * 60 * 1000);
+    while (current <= end) {
       const dateStr = formatJSTDateString(current);
       const label = formatJSTDayLabel(current);
       const dayOfWeek = getDayOfWeekJP(current);
       const holidayName = getJapaneseHoliday(current) || undefined;
       
       list.push({
-        date: current,
+        date: new Date(current),
         dateStr,
         label,
         dayOfWeek,
         holidayName,
         slots: []
       });
+      
+      current.setDate(current.getDate() + 1);
     }
     return list;
   };
