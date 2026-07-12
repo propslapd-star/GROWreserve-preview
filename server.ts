@@ -124,8 +124,10 @@ function parseICS(icsContent: string): CalendarEvent[] {
   }
 
   const expandedEvents: CalendarEvent[] = [];
-  const rangeStart = new Date("2026-05-01T00:00:00");
-  const rangeEnd = new Date("2026-07-31T23:59:59"); // 3 months around our local time of May 2026
+  // Dynamically set range to cover 3 months before and 3 months after today
+  const today = new Date();
+  const rangeStart = new Date(today.getFullYear(), today.getMonth() - 3, 1, 0, 0, 0);
+  const rangeEnd = new Date(today.getFullYear(), today.getMonth() + 4, 0, 23, 59, 59);
 
   for (const ev of rawEvents) {
     if (!ev.dtstartRaw) continue;
