@@ -149,7 +149,7 @@ const cleanDescriptionForTile = (desc: string) => {
 };
 
 // Color assignment based on event titles (Matching the user's specific region colors)
-const getEventColorStyle = (title: string, startISO?: string) => {
+const getEventColorStyle = (title: string, startISO?: string, isManual?: boolean) => {
   const t = title.toLowerCase();
   
   if (t.includes("完了済み") || t.includes("完了")) {
@@ -181,6 +181,14 @@ const getEventColorStyle = (title: string, startISO?: string) => {
     };
   }
   if (t.includes("不可") || t.includes("予約不可") || t.includes("eo")) {
+    if (isManual) {
+      return {
+        bg: "bg-[#ff0000] text-white border-red-700 hover:bg-[#ff1a1a]",
+        border: "border border-red-800 font-bold",
+        tag: "予約不可",
+      };
+    }
+
     const diffDays = startISO ? (() => {
       try {
         const dDate = new Date(startISO);
@@ -1583,7 +1591,8 @@ export default function App() {
                             const eventLabel = ev.summary;
                             const styleConfig = getEventColorStyle(
                               ev.description && ev.description.trim() ? `${ev.summary} ${ev.description}` : ev.summary,
-                              ev.start
+                              ev.start,
+                              !ev.id.includes("unavail_gap_")
                             );
 
                             // Calculate duration in minutes to handle short visual labels gracefully
