@@ -189,35 +189,11 @@ const getEventColorStyle = (title: string, startISO?: string, isManual?: boolean
       };
     }
 
-    const diffDays = startISO ? (() => {
-      try {
-        const dDate = new Date(startISO);
-        dDate.setHours(0, 0, 0, 0);
-        let todayRef = new Date();
-        if (todayRef.getFullYear() !== 2026) {
-          todayRef = new Date("2026-05-29T00:00:00");
-        }
-        todayRef.setHours(0, 0, 0, 0);
-        const diffTime = dDate.getTime() - todayRef.getTime();
-        return Math.round(diffTime / (1000 * 60 * 60 * 24));
-      } catch (e) {
-        return 0;
-      }
-    })() : 0;
-
-    if (diffDays <= 4) {
-      return {
-        bg: "bg-slate-200 text-slate-600 border-slate-300 hover:bg-slate-300 cursor-not-allowed",
-        border: "border border-slate-400 font-medium",
-        tag: "予約不可",
-      };
-    } else {
-      return {
-        bg: "bg-[#ff0000] text-white border-red-700 hover:bg-[#ff1a1a]",
-        border: "border border-red-800 font-bold",
-        tag: "予約不可",
-      };
-    }
+    return {
+      bg: "bg-slate-200 text-slate-600 border-slate-300 hover:bg-slate-300 cursor-not-allowed",
+      border: "border border-slate-400 font-medium",
+      tag: "予約不可",
+    };
   }
   if (t.includes("前枠") || t.includes("お客様対応") || t.includes("対応") || t.includes("枠")) {
     return {
@@ -1482,7 +1458,7 @@ export default function App() {
               daysList.map((day) => {
                 let dayEvents = eventsByDay[day.dateStr] || [];
                 
-                // Block active/empty times for days within 3 days from today (including today, and onward)
+                // Block active/empty times for days within 2 days from today (including today, and onward)
                 const dDate = new Date(day.date);
                 dDate.setHours(0, 0, 0, 0);
 
@@ -1495,7 +1471,7 @@ export default function App() {
                 const diffTime = dDate.getTime() - todayRef.getTime();
                 const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-                if (diffDays <= 3) {
+                if (diffDays <= 2) {
                   const gaps = fillEmptySlotsWithUnavailable(day.date, dayEvents);
                   dayEvents = [...dayEvents, ...gaps];
                   dayEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
@@ -1575,7 +1551,7 @@ export default function App() {
                       <div className="absolute inset-0 h-full w-full flex items-center pr-2 pl-0.5" id={`events-overlay-${day.dateStr}`}>
                         
                         {dayEvents.length === 0 ? (
-                          diffDays <= 0 ? (
+                          diffDays <= 2 ? (
                             <div className="text-[10px] text-slate-400 font-medium pl-4 h-full flex items-center font-mono whitespace-nowrap italic pointer-events-none select-none">
                               （予約不可）
                             </div>
