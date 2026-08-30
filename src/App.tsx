@@ -1414,7 +1414,7 @@ export default function App() {
             <div style={{ zoom: zoomLevel }} className="min-w-0 md:min-w-[760px] flex-1 flex flex-col h-full w-full origin-top-left" id="gantt_chart_inner_width_container">
 
               {/* Hourly scale header labels */}
-              <div className="bg-slate-50 grid grid-cols-[70px_1fr] sm:grid-cols-[85px_1fr] md:grid-cols-[140px_1fr] border-b border-slate-300 shrink-0 text-xs text-slate-600 font-bold font-mono tracking-wider items-center h-10 select-none sticky top-0 z-10" id="hourly_scale_header">
+              <div className="bg-slate-50 grid grid-cols-[80px_1fr] sm:grid-cols-[95px_1fr] md:grid-cols-[140px_1fr] border-b border-slate-300 shrink-0 text-xs text-slate-600 font-bold font-mono tracking-wider items-center h-10 select-none sticky top-0 z-10" id="hourly_scale_header">
             <div className="px-1.5 sm:px-3 md:px-4 border-r border-slate-300 h-full flex items-center text-[10px] md:text-xs" id="lbl_col_date">日付</div>
             <div className="grid grid-cols-9 h-full pl-0.5" id="lbl_col_hours">
               {["10", "11", "12", "13", "14", "15", "16", "17", "18"].map((hour, index) => (
@@ -1507,7 +1507,7 @@ export default function App() {
                   <div 
                     key={day.dateStr}
                     ref={(el) => { dayRowRefs.current[day.dateStr] = el; }}
-                    className={`grid grid-cols-[70px_1fr] sm:grid-cols-[85px_1fr] md:grid-cols-[140px_1fr] relative min-h-[2.5rem] lg:min-h-[3rem] transition-colors ${isSelected ? "bg-indigo-50/30 ring-1 ring-inset ring-indigo-200" : ""}`}
+                    className={`grid grid-cols-[80px_1fr] sm:grid-cols-[95px_1fr] md:grid-cols-[140px_1fr] relative min-h-[2.5rem] lg:min-h-[3rem] transition-colors ${isSelected ? "bg-indigo-50/30 ring-1 ring-inset ring-indigo-200" : ""}`}
                     id={`day-row-${day.dateStr}`}
                   >
                     {/* Day label metadata representation column */}
@@ -1515,18 +1515,17 @@ export default function App() {
                       className={`px-1 sm:px-2 py-1 flex flex-col justify-center border-r border-slate-300 h-full gap-0.5 md:flex-row md:items-center md:justify-between md:px-2.5 ${headerClass}`}
                       id={`day-header-${day.dateStr}`}
                     >
-                      <div className="flex items-center gap-1 sm:gap-1.5 justify-center md:justify-start select-none">
-                        <span className={`text-[10px] sm:text-xs font-black tracking-tighter sm:tracking-tight shrink-0 ${textClass}`}>
-                          <span className="md:hidden">{day.label.replace("月", "/").replace("日", "")}</span>
-                          <span className="hidden md:inline">{day.label}</span>
+                      <div className="flex items-center gap-1 sm:gap-1.5 justify-center md:justify-start select-none whitespace-nowrap">
+                        <span className={`text-[10px] sm:text-xs font-black tracking-tight shrink-0 ${textClass}`}>
+                          {day.label}
                         </span>
-                        <span className={`text-[8.5px] sm:text-[9.5px] font-bold px-0.5 py-0.2 md:px-1 md:py-0.5 rounded-xs tracking-tighter sm:tracking-wider shrink-0 ${badgeClass}`}>
+                        <span className={`text-[8.5px] sm:text-[9.5px] font-bold px-0.5 py-0.2 md:px-1 md:py-0.5 rounded-xs tracking-tight shrink-0 ${badgeClass}`}>
                           {day.dayOfWeek}
                         </span>
                       </div>
                       {day.holidayName && (
                         <div className="flex justify-center select-none shrink-0" title={day.holidayName}>
-                          <span className="text-[7.5px] md:text-[8px] font-extrabold px-0.5 py-[0.5px] md:px-1 md:py-0.5 rounded-xs tracking-tighter bg-rose-100 text-red-700 border border-rose-200 text-center truncate max-w-[28px] md:max-w-[52px]">
+                          <span className="text-[7.5px] md:text-[8px] font-extrabold px-0.5 py-[0.5px] md:px-1 md:py-0.5 rounded-xs tracking-tighter bg-rose-100 text-red-700 border border-rose-200 text-center truncate max-w-[32px] md:max-w-[52px]">
                             <span className="md:hidden">祝</span>
                             <span className="hidden md:inline">{day.holidayName}</span>
                           </span>
