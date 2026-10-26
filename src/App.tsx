@@ -150,7 +150,25 @@ const cleanDescriptionForTile = (desc: string) => {
 
 // Color assignment based on event titles (Matching the user's specific region colors)
 const getEventColorStyle = (title: string, startISO?: string, isManual?: boolean) => {
+  const norm = title.normalize("NFKC").toLowerCase();
   const t = title.toLowerCase();
+
+  if (
+    norm.includes("pご依頼分") ||
+    norm.includes("pご依頼") ||
+    norm.includes("p依頼分") ||
+    norm.includes("p依頼") ||
+    t.includes("pご依頼分") ||
+    t.includes("ｐご依頼分") ||
+    t.includes("pご依頼") ||
+    t.includes("ｐご依頼")
+  ) {
+    return {
+      bg: "bg-[#38bdf8] text-slate-900 border-sky-400 hover:bg-[#0ea5e9]",
+      border: "border-2 border-sky-500 font-bold",
+      tag: "Pご依頼分",
+    };
+  }
   
   if (t.includes("完了済み") || t.includes("完了")) {
     return {
@@ -506,6 +524,15 @@ const getDemoEvents = (): CalendarEvent[] => {
       location: "大阪市",
       start: "2026-05-31T10:00:00+09:00",
       end: "2026-05-31T14:00:00+09:00",
+      isAllDay: false
+    },
+    {
+      id: "demo_10",
+      summary: "Pご依頼分",
+      description: "Pご依頼分として登録されたアポイント枠です。（水色判定）",
+      location: "堺市",
+      start: "2026-05-31T15:00:00+09:00",
+      end: "2026-05-31T17:30:00+09:00",
       isAllDay: false
     }
   ];
@@ -1290,6 +1317,13 @@ export default function App() {
             </h4>
             <div className="flex flex-col gap-2" id="legend_list">
               <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-[#38bdf8] border border-sky-400 rounded-sm shadow-2xs" />
+                <div>
+                  <span className="font-bold text-slate-800 block leading-tight">Pご依頼分</span>
+                  <p className="text-[9px] text-slate-400">「Pご依頼分」のキーワードを含む予定</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-[#3b82f6] border border-blue-600 rounded-sm shadow-2xs" />
                 <div>
                   <span className="font-bold text-slate-800 block leading-tight">アポイント完了済み</span>
@@ -1324,7 +1358,7 @@ export default function App() {
                 </div>
                 <div>
                   <span className="font-bold text-slate-800 block leading-tight">予約不可</span>
-                  <p className="text-[9px] text-slate-400">「不可」「予約不可」等（3日以内・当日以降は灰色、4日以降は赤色で表示）</p>
+                  <p className="text-[9px] text-slate-400">「不可」「予約不可」等（2日以内は灰色、手動入力は赤色で表示）</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
