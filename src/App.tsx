@@ -1147,7 +1147,7 @@ export default function App() {
             {isSasatsuMode && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-250 mb-3 shadow-2xs">
                 <Lock className="w-3.5 h-3.5 text-amber-600" />
-                sasatsu版（詳細非表示バージョン）
+                詳細非表示モード
               </span>
             )}
             <h1 className="text-xl font-bold text-slate-800 tracking-tight" id="login_card_title">
@@ -1155,7 +1155,7 @@ export default function App() {
             </h1>
             <p className="text-xs text-slate-500 mt-1.5 max-w-xs leading-relaxed" id="login_card_subtitle">
               {isSasatsuMode
-                ? "「GROWカレンダー予約状況（sasatsu版）」の閲覧にはアクセス用パスワードの入力が必要です。"
+                ? "「GROWカレンダー予約状況（詳細非表示モード）」の閲覧にはアクセス用パスワードの入力が必要です。"
                 : "「GROWカレンダー予約状況管理」の閲覧にはアクセス用パスワードの入力が必要です。"}
             </p>
           </div>
@@ -1236,12 +1236,12 @@ export default function App() {
             {isSasatsuMode ? (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs shrink-0" title="URL: /sasatsu からアクセス中。予定の詳細は非表示です。">
                 <Lock className="w-3 h-3 text-amber-700" />
-                <span>sasatsu版（詳細非表示）</span>
+                <span>詳細非表示モード</span>
               </span>
             ) : (
               <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
                 <Eye className="w-3 h-3 text-slate-500" />
-                <span>通常版</span>
+                <span>通常モード</span>
               </span>
             )}
           </div>
@@ -1259,10 +1259,10 @@ export default function App() {
                   ? "bg-white text-indigo-700 shadow-2xs font-extrabold"
                   : "text-slate-500 hover:text-slate-800"
               }`}
-              title="通常バージョンに切り替えます（詳細ポップアップ閲覧可能）"
+              title="通常モードに切り替えます（詳細ポップアップ閲覧可能）"
             >
               <Eye className="w-3 h-3" />
-              <span className="hidden sm:inline">通常版</span>
+              <span className="hidden sm:inline">通常モード</span>
             </button>
             <button
               type="button"
@@ -1272,10 +1272,10 @@ export default function App() {
                   ? "bg-amber-500 text-white shadow-2xs font-extrabold"
                   : "text-slate-500 hover:text-slate-800"
               }`}
-              title="sasatsuバージョンに切り替えます（詳細非表示）"
+              title="詳細非表示モードに切り替えます"
             >
               <Lock className="w-3 h-3" />
-              <span>sasatsu版</span>
+              <span>詳細非表示モード</span>
             </button>
           </div>
 
@@ -1353,12 +1353,12 @@ export default function App() {
                 {isSasatsuMode ? (
                   <>
                     <Lock className="w-3.5 h-3.5 text-amber-600" />
-                    <span>sasatsu版（詳細非表示）</span>
+                    <span>詳細非表示モード</span>
                   </>
                 ) : (
                   <>
                     <Eye className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>通常版（詳細表示）</span>
+                    <span>通常モード（詳細表示）</span>
                   </>
                 )}
               </span>
@@ -1370,9 +1370,9 @@ export default function App() {
                     ? "bg-white hover:bg-amber-100 text-amber-800 border-amber-300"
                     : "bg-white hover:bg-indigo-100 text-indigo-700 border-indigo-200"
                 }`}
-                title="バージョンを切り替えます"
+                title="表示モードを切り替えます"
               >
-                {isSasatsuMode ? "通常版へ" : "sasatsu版へ"}
+                {isSasatsuMode ? "通常モードへ" : "詳細非表示へ"}
               </button>
             </div>
             <p className="text-[10px] text-slate-600 leading-relaxed">
@@ -1913,9 +1913,9 @@ export default function App() {
                 <Lock className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-xs text-amber-300">sasatsu版（詳細非表示バージョン）</p>
+                <p className="font-bold text-xs text-amber-300">詳細非表示モード</p>
                 <p className="text-[11px] text-slate-300 leading-tight mt-0.5">
-                  このURL（/sasatsu）では、予定の詳細・お客様メモ等の閲覧は制限されています。
+                  このモード（/sasatsu）では、予定の詳細・お客様メモ等の閲覧は制限されています。
                 </p>
               </div>
               <button 
