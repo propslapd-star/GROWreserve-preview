@@ -587,6 +587,41 @@ export default function App() {
   
   // Modal detail display
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+
+  // URL & Mode detection for sasatsu (https://www.reserve-biz-grow.com/sasatsu)
+  const checkIsSasatsuUrl = () => {
+    if (typeof window === "undefined") return false;
+    const path = window.location.pathname.toLowerCase();
+    const search = window.location.search.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    return path.includes("sasatsu") || search.includes("sasatsu") || hash.includes("sasatsu");
+  };
+
+  const [isSasatsuMode, setIsSasatsuMode] = useState<boolean>(() => checkIsSasatsuUrl());
+  const [restrictedNoticeVisible, setRestrictedNoticeVisible] = useState<boolean>(false);
+  const restrictedNoticeTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const mode = checkIsSasatsuUrl();
+      setIsSasatsuMode(mode);
+      if (mode) setSelectedEvent(null);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const toggleVersionMode = (sasatsu: boolean) => {
+    setIsSasatsuMode(sasatsu);
+    setSelectedEvent(null);
+    try {
+      const targetPath = sasatsu ? "/sasatsu" : "/";
+      window.history.pushState({}, "", targetPath);
+    } catch (e) {
+      // Safe fallback if history API restricted in sandboxed iframe
+    }
+    fetchEvents(true, sasatsu);
+  };
   
   // Layout Options Modal
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -682,15 +717,20 @@ export default function App() {
   }, []);
 
   // Fetch Google calendar events on mount & refresh
-  const fetchEvents = async (force: boolean = false) => {
+  const fetchEvents = async (force: boolean = false, sasatsuOverride?: boolean) => {
     setIsRefreshing(true);
+    const sasatsu = sasatsuOverride !== undefined ? sasatsuOverride : isSasatsuMode;
     try {
       let fetchedEvents: CalendarEvent[] = [];
       let isDemo = false;
       let usedFallback = false;
 
       try {
-        const response = await fetch(`/api/events${force ? "?force=true" : ""}`);
+        const queryParams = new URLSearchParams();
+        if (force) queryParams.set("force", "true");
+        if (sasatsu) queryParams.set("mode", "sasatsu");
+        const qs = queryParams.toString();
+        const response = await fetch(`/api/events${qs ? `?${qs}` : ""}`);
         if (!response.ok) {
           throw new Error(`HTTP error ${response.status}`);
         }
@@ -765,13 +805,22 @@ export default function App() {
         }
       }
 
+      // If in sasatsu mode, sanitize event descriptions to ensure private details are not accessible
+      if (sasatsu) {
+        fetchedEvents = fetchedEvents.map(e => ({
+          ...e,
+          description: "", // strip private descriptions/notes in sasatsu mode
+        }));
+      }
+
       setEvents(fetchedEvents);
       setIsDemoModeActive(isDemo);
       setError(null);
     } catch (err: any) {
       console.error("Critical error inside fetchEvents flow:", err);
       setError(err.message || "予期しないエラーが発生しました。");
-      setEvents(getDemoEvents());
+      const fallbackEvents = getDemoEvents();
+      setEvents(sasatsu ? fallbackEvents.map(e => ({ ...e, description: "" })) : fallbackEvents);
       setIsDemoModeActive(true);
     } finally {
       setIsLoading(false);
@@ -1095,11 +1144,19 @@ export default function App() {
             <div className="w-14 h-14 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-4 shadow-sm animate-pulse">
               <Lock className="w-6 h-6" />
             </div>
+            {isSasatsuMode && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-250 mb-3 shadow-2xs">
+                <Lock className="w-3.5 h-3.5 text-amber-600" />
+                sasatsu版（詳細非表示バージョン）
+              </span>
+            )}
             <h1 className="text-xl font-bold text-slate-800 tracking-tight" id="login_card_title">
               パスワード保護
             </h1>
             <p className="text-xs text-slate-500 mt-1.5 max-w-xs leading-relaxed" id="login_card_subtitle">
-              「GROWカレンダー予約状況管理」の閲覧にはアクセス用パスワードの入力が必要です。
+              {isSasatsuMode
+                ? "「GROWカレンダー予約状況（sasatsu版）」の閲覧にはアクセス用パスワードの入力が必要です。"
+                : "「GROWカレンダー予約状況管理」の閲覧にはアクセス用パスワードの入力が必要です。"}
             </p>
           </div>
 
@@ -1172,15 +1229,56 @@ export default function App() {
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
             <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex items-center gap-2">
             <h1 className="text-sm sm:text-base md:text-xl font-bold text-gray-900 tracking-tight whitespace-nowrap truncate" id="main_title_txt">
               予約スケジュール
             </h1>
+            {isSasatsuMode ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs shrink-0" title="URL: /sasatsu からアクセス中。予定の詳細は非表示です。">
+                <Lock className="w-3 h-3 text-amber-700" />
+                <span>sasatsu版（詳細非表示）</span>
+              </span>
+            ) : (
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+                <Eye className="w-3 h-3 text-slate-500" />
+                <span>通常版</span>
+              </span>
+            )}
           </div>
         </div>
         
-        {/* Sync Controls */}
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        {/* Sync Controls & Version Switcher */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          {/* Quick Version Mode Switcher */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs shadow-3xs" id="version_switcher_control">
+            <button
+              type="button"
+              onClick={() => toggleVersionMode(false)}
+              className={`px-2 py-1 sm:px-2.5 sm:py-1 rounded-md text-[10px] sm:text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer select-none ${
+                !isSasatsuMode
+                  ? "bg-white text-indigo-700 shadow-2xs font-extrabold"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+              title="通常バージョンに切り替えます（詳細ポップアップ閲覧可能）"
+            >
+              <Eye className="w-3 h-3" />
+              <span className="hidden sm:inline">通常版</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleVersionMode(true)}
+              className={`px-2 py-1 sm:px-2.5 sm:py-1 rounded-md text-[10px] sm:text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer select-none ${
+                isSasatsuMode
+                  ? "bg-amber-500 text-white shadow-2xs font-extrabold"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+              title="sasatsuバージョンに切り替えます（詳細非表示）"
+            >
+              <Lock className="w-3 h-3" />
+              <span>sasatsu版</span>
+            </button>
+          </div>
+
           <button 
             type="button"
             onClick={() => {
@@ -1243,8 +1341,48 @@ export default function App() {
               <X className="w-4.5 h-4.5 text-slate-500" />
             </button>
           </div>
-          
 
+          {/* Current Version Mode Card */}
+          <div className={`rounded-xl p-3 text-xs border transition-all ${
+            isSasatsuMode
+              ? "bg-amber-50/90 border-amber-250 text-amber-900 shadow-2xs"
+              : "bg-indigo-50/70 border-indigo-150 text-indigo-900 shadow-2xs"
+          }`} id="sidebar_version_card">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="font-extrabold flex items-center gap-1.5 text-[11px]">
+                {isSasatsuMode ? (
+                  <>
+                    <Lock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>sasatsu版（詳細非表示）</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>通常版（詳細表示）</span>
+                  </>
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={() => toggleVersionMode(!isSasatsuMode)}
+                className={`text-[9.5px] font-bold px-2 py-0.5 rounded cursor-pointer transition-all border ${
+                  isSasatsuMode
+                    ? "bg-white hover:bg-amber-100 text-amber-800 border-amber-300"
+                    : "bg-white hover:bg-indigo-100 text-indigo-700 border-indigo-200"
+                }`}
+                title="バージョンを切り替えます"
+              >
+                {isSasatsuMode ? "通常版へ" : "sasatsu版へ"}
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-600 leading-relaxed">
+              {isSasatsuMode ? (
+                <>URL: <code className="font-mono font-bold bg-amber-100/90 px-1 py-0.5 rounded text-[9.5px] text-amber-900">/sasatsu</code><br />予定タイルをクリックしても個人情報や補足メモ等の詳細ポップアップは開かない安全閲覧モードです。</>
+              ) : (
+                <>予定タイルをクリックすると、予約時間枠や補足メモ・対象エリア等の詳細を確認できます。</>
+              )}
+            </p>
+          </div>
 
           {/* Monthly Mini Calendar Widget */}
           <div>
@@ -1615,9 +1753,27 @@ export default function App() {
                               <button
                                 key={`event-pill-${ev.id}`}
                                 style={pos}
-                                onClick={() => setSelectedEvent(ev)}
-                                className={`absolute h-[85%] rounded-md flex flex-row items-center px-1.5 py-0 text-left overflow-hidden select-none cursor-pointer transition-all active:scale-98 border shadow-2xs ${styleConfig.bg} ${styleConfig.border}`}
-                                title={ev.description && ev.description.trim() ? `${ev.summary}: ${ev.description}` : `${ev.summary}`}
+                                onClick={() => {
+                                  if (isSasatsuMode) {
+                                    setRestrictedNoticeVisible(true);
+                                    if (restrictedNoticeTimeoutRef.current) {
+                                      clearTimeout(restrictedNoticeTimeoutRef.current);
+                                    }
+                                    restrictedNoticeTimeoutRef.current = setTimeout(() => {
+                                      setRestrictedNoticeVisible(false);
+                                    }, 3500);
+                                    return;
+                                  }
+                                  setSelectedEvent(ev);
+                                }}
+                                className={`absolute h-[85%] rounded-md flex flex-row items-center px-1.5 py-0 text-left overflow-hidden select-none transition-all active:scale-98 border shadow-2xs ${
+                                  isSasatsuMode ? "cursor-default" : "cursor-pointer"
+                                } ${styleConfig.bg} ${styleConfig.border}`}
+                                title={
+                                  isSasatsuMode
+                                    ? `${ev.summary}（sasatsu版: 詳細非表示）`
+                                    : (ev.description && ev.description.trim() ? `${ev.summary}: ${ev.description}` : `${ev.summary}`)
+                                }
                               >
                                 {(showFullTime || showShortTime) && (
                                   <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 border-r border-black/10 pr-1 sm:pr-1.5 mr-1 sm:mr-1.5 h-3.5 select-none whitespace-nowrap">
@@ -1658,7 +1814,7 @@ export default function App() {
 
       {/* EVENT DETAILED INSPECTOR DIALOG MODAL */}
       <AnimatePresence>
-        {selectedEvent && (
+        {!isSasatsuMode && selectedEvent && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs" id="inspect_overlay">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -1738,6 +1894,38 @@ export default function App() {
                   </button>
                 </div>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+ 
+      {/* RESTRICTED NOTICE TOAST FOR SASATSU MODE */}
+      <AnimatePresence>
+        {restrictedNoticeVisible && (
+          <div className="fixed bottom-6 right-6 z-50 pointer-events-auto select-none" id="sasatsu_toast_wrapper">
+            <motion.div
+              initial={{ opacity: 0, y: 25, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 25, scale: 0.95 }}
+              className="bg-slate-900/95 text-white px-4 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 border border-amber-500/50 backdrop-blur-md max-w-sm sm:max-w-md"
+            >
+              <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-lg shrink-0 border border-amber-500/30">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-xs text-amber-300">sasatsu版（詳細非表示バージョン）</p>
+                <p className="text-[11px] text-slate-300 leading-tight mt-0.5">
+                  このURL（/sasatsu）では、予定の詳細・お客様メモ等の閲覧は制限されています。
+                </p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setRestrictedNoticeVisible(false)}
+                className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer shrink-0"
+                title="閉じる"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </motion.div>
           </div>
         )}

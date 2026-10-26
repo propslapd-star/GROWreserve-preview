@@ -386,6 +386,15 @@ async function startServer() {
             start: "2026-05-31T10:00:00+09:00",
             end: "2026-05-31T14:00:00+09:00",
             isAllDay: false
+          },
+          {
+            id: "demo_10",
+            summary: "Pご依頼分",
+            description: "Pご依頼分として登録されたアポイント枠です。（水色判定）",
+            location: "堺市",
+            start: "2026-05-31T15:00:00+09:00",
+            end: "2026-05-31T17:30:00+09:00",
+            isAllDay: false
           }
         ];
       }
@@ -394,12 +403,28 @@ async function startServer() {
       cachedIsDemo = isDemoMode;
       cacheTime = now;
 
-      res.json({ success: true, events: finalEvents, isDemo: isDemoMode, fromCache: false });
+      // In sasatsu mode, sanitize private details (customer notes and descriptions)
+      const isSasatsuReq = req.query.mode === "sasatsu" || req.headers["x-sasatsu-mode"] === "true";
+      const responseEvents = isSasatsuReq
+        ? finalEvents.map(e => ({
+            ...e,
+            description: "", // strip private customer notes and descriptions
+          }))
+        : finalEvents;
+
+      res.json({ success: true, events: responseEvents, isDemo: isDemoMode, fromCache: false, isSasatsu: isSasatsuReq });
     } catch (err: any) {
       console.error("Error fetching or parsing calendar ICS feed:", err.message);
       // Return stale cache if available, else error
       if (cachedEvents.length > 0) {
-        return res.json({ success: true, events: cachedEvents, isDemo: cachedIsDemo, fromCache: true, staleError: err.message });
+        const isSasatsuReq = req.query.mode === "sasatsu" || req.headers["x-sasatsu-mode"] === "true";
+        const responseEvents = isSasatsuReq
+          ? cachedEvents.map(e => ({
+              ...e,
+              description: "",
+            }))
+          : cachedEvents;
+        return res.json({ success: true, events: responseEvents, isDemo: cachedIsDemo, fromCache: true, staleError: err.message, isSasatsu: isSasatsuReq });
       }
       res.status(500).json({ success: false, error: err.message });
     }
@@ -420,7 +445,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
+    app.get(["/sasatsu", "/sasatsu/*", "*"], (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
